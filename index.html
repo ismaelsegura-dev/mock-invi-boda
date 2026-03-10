@@ -2,6 +2,29 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Clock, Gift, Music, ChevronDown, Check, Heart, Calendar, ArrowRight, Instagram } from 'lucide-react';
 
 // --- CUSTOM HOOKS ---
+
+// Hook para inyectar Tailwind y Fuentes si el proyecto local no los tiene configurados
+const useExternalDependencies = () => {
+  useEffect(() => {
+    // 1. Inyectar Tailwind CSS si no está presente en el build de GitHub Pages
+    if (!document.getElementById('tailwind-cdn')) {
+      const tailwindScript = document.createElement('script');
+      tailwindScript.id = 'tailwind-cdn';
+      tailwindScript.src = 'https://cdn.tailwindcss.com';
+      document.head.appendChild(tailwindScript);
+    }
+
+    // 2. Inyectar Google Fonts de forma segura
+    if (!document.getElementById('google-fonts')) {
+      const fontLink = document.createElement('link');
+      fontLink.id = 'google-fonts';
+      fontLink.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@200;300;400;500;600&display=swap';
+      fontLink.rel = 'stylesheet';
+      document.head.appendChild(fontLink);
+    }
+  }, []);
+};
+
 // Hook para animaciones al hacer scroll (Scroll Reveal)
 const useScrollReveal = () => {
   useEffect(() => {
@@ -16,10 +39,16 @@ const useScrollReveal = () => {
       { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
-    const elements = document.querySelectorAll('.reveal');
-    elements.forEach((el) => observer.observe(el));
+    // Pequeño timeout para dar tiempo a que Tailwind cargue si es inyectado
+    setTimeout(() => {
+      const elements = document.querySelectorAll('.reveal');
+      elements.forEach((el) => observer.observe(el));
+    }, 500);
 
-    return () => elements.forEach((el) => observer.unobserve(el));
+    return () => {
+      const elements = document.querySelectorAll('.reveal');
+      elements.forEach((el) => observer.unobserve(el));
+    };
   }, []);
 };
 
@@ -28,7 +57,8 @@ const useScrollReveal = () => {
 // 1. Hero Section
 const Hero = () => {
   return (
-    <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
+    // Se usa h-[100dvh] en lugar de h-screen para evitar problemas con la barra de Safari en móviles
+    <section className="relative h-[100dvh] min-h-screen w-full flex items-center justify-center overflow-hidden">
       {/* Background Image with Parallax effect */}
       <div 
         className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat z-0 scale-105 animate-slow-zoom"
@@ -236,7 +266,12 @@ const DetailsBento = () => {
   const [copied, setCopied] = useState(false);
 
   const copyBankInfo = () => {
-    // navigator.clipboard.writeText("ES98 1234 5678 9012 3456");
+    // Para entornos que bloqueen el portapapeles, usamos un try/catch o un fallback visual rápido
+    try {
+      navigator.clipboard.writeText("ES98 1234 5678 9012 3456");
+    } catch (e) {
+      console.log('Copiado manual requerido');
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -411,14 +446,13 @@ const Footer = () => {
 
 // --- MAIN APP ---
 export default function App() {
+  useExternalDependencies(); // <-- Inyecta Tailwind automáticamente si hace falta
   useScrollReveal();
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-800 font-sans selection:bg-stone-300 selection:text-stone-900 overflow-x-hidden">
-      {/* Global CSS for fonts and custom animations */}
+      {/* CSS para animaciones específicas */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@200;300;400;500;600&display=swap');
-        
         .font-serif {
           font-family: 'Cormorant Garamond', serif;
         }
@@ -456,7 +490,7 @@ export default function App() {
         }
       `}</style>
 
-      {/* Floating RSVP Button (Visible after scroll) */}
+      {/* Floating RSVP Button */}
       <a 
         href="#rsvp" 
         className="fixed bottom-6 right-6 z-50 bg-stone-800/90 backdrop-blur-md text-stone-50 px-6 py-3 rounded-full font-sans text-xs font-medium tracking-widest uppercase shadow-xl hover:bg-stone-700 transition-all hover:scale-105 border border-stone-600/50"
